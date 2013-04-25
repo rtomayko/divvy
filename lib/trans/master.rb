@@ -43,9 +43,8 @@ module Trans
       @input_read.close
 
       while workers.any? { |worker| worker.running? }
-        kill_workers
-        sleep 1
         reap_workers
+        sleep 1
       end
     end
 
@@ -62,15 +61,8 @@ module Trans
       @script.before_fork(worker)
 
       worker.spawn do
-        # TODO setup signal handling
+        $stdin.close
         @input_write.close
-        $stdin.reopen(@input_read)
-        $stdin.sync = true
-        @script.after_fork(worker)
-
-        while arguments = Marshal.load($stdin)
-          @script.perform(*arguments)
-        end
       end
 
       worker
