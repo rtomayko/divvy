@@ -38,8 +38,17 @@ module Trans
       end
     end
 
+    def kill(signal)
+      fail "worker not running" if @pid.nil?
+      log "sending signal #{signal}"
+      Process.kill(signal, @pid)
+      true
+    rescue Errno::ESRCH
+      false
+    end
+
     def log(message)
-      warn "worker [#{number}] #{message}"
+      warn "worker [#{number}]: #{message}"
     end
   end
 end
