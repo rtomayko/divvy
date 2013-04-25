@@ -15,7 +15,19 @@ module Trans
     end
 
     def self.load(file)
-      
+      Kernel::load(file)
+
+      if subclass = @subclasses.last
+        subclass.new
+      else
+        fail "#{file} does not define a subclass of Trans::Script"
+      end
+    end
+
+    @subclasses = []
+    def self.inherited(subclass)
+      @subclasses << subclass if self == Trans::Script
+      super
     end
   end
 end
