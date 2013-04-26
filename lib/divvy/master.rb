@@ -29,13 +29,13 @@ module Divvy
     end
 
     def run
-      setup_signal_traps
+      install_signal_traps
       start_server
 
-      @task.dispatch do |*arguments|
+      @task.dispatch do |*task_item|
         boot_workers
 
-        data = Marshal.dump(arguments)
+        data = Marshal.dump(task_item)
 
         begin
           sock = @server.accept
@@ -50,6 +50,7 @@ module Divvy
 
     ensure
       if !workers.empty?
+        reset_signal_traps
         stop_server
         while workers.any? { |worker| worker.running? }
           reap_workers
@@ -57,6 +58,13 @@ module Divvy
           # TODO send TERM when workers won't reap for some amount of time
         end
       end
+    end
+
+    # Initiate shutdown of the run loop. The loop will not be stopped when this
+    # method returns. The original run loop will return after the current iteration
+    # of task item.
+    def shutdown
+      @shutdown = true
     end
 
     def start_server
@@ -84,9 +92,12 @@ module Divvy
       @task.before_fork(worker)
 
       worker.spawn do
+        reset_signal_traps
         @workers = []
+
         @server.close
         @server = nil
+
         $stdin.close
       end
 
@@ -105,16 +116,27 @@ module Divvy
       workers.select { |worker| worker.reap }
     end
 
-    def setup_signal_traps
-      %w[INT TERM QUIT].each do |signal|
-        Signal.trap signal do
-          next if @shutdown
-          @shutdown = true
-          log "#{signal} received. initiating graceful shutdown..."
+    def install_signal_traps
+      @traps =
+        %w[INT TERM QUIT].map do |signal|
+          Signal.trap signal do
+            next if @shutdown
+            shutdown
+            log "#{signal} received. initiating graceful shutdown..."
+          end
+        end
+      @traps << Signal.trap("CHLD") { @reap = true }
+    end
+
+    def reset_signal_traps
+      %w[INT TERM QUIT CHLD].each do |signal|
+        handler = @traps.shift || "DEFAULT"
+        if handler.is_a?(String)
+          Signal.trap(signal, handler)
+        else
+          Signal.trap(signal, &handler)
         end
       end
-
-      Signal.trap("CHLD") { @reap = true }
     end
 
     def log(message)

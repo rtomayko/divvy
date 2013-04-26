@@ -34,7 +34,7 @@ module Divvy
 
       if (@pid = fork).nil?
         @pid = $$
-        setup_signal_traps
+        install_signal_traps
         yield
         main
         exit 0
@@ -95,8 +95,8 @@ module Divvy
       @pid == $$
     end
 
-    def setup_signal_traps
-      fail "attempt to setup worker signal handling in master" if !worker_process?
+    def install_signal_traps
+      fail "attempt to install worker signal handling in master" if !worker_process?
 
       %w[INT TERM QUIT].each do |signal|
         trap signal do
@@ -105,8 +105,6 @@ module Divvy
           log "#{signal} received. initiating graceful shutdown..."
         end
       end
-
-      trap "CHLD", "DEFAULT"
     end
 
     def log(message)
