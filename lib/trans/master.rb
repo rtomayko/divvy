@@ -19,6 +19,7 @@ module Trans
       @input_read.sync = @input_write.sync = true
 
       @shutdown = false
+      @reap = false
 
       @workers = []
       (1..@worker_count).each do |worker_num|
@@ -79,6 +80,7 @@ module Trans
     end
 
     def reap_workers
+      @reap = false
       workers.select { |worker| worker.reap }
     end
 
@@ -91,7 +93,7 @@ module Trans
         end
       end
 
-      Signal.trap("CHLD") { reap_workers }
+      Signal.trap("CHLD") { @reap = true }
     end
 
     def log(message)
