@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
-#/ Usage: trans [-n <workers>] <script>.rb
-#/ Run a trans script with the given number of workers.
+#/ Usage: divvy [-n <workers>] <script>.rb
+#/ Run a divvy script with the given number of workers.
 require 'optparse'
 $stderr.sync = true
 
@@ -10,7 +10,7 @@ worker_count = 1
 # Whether to write verbose output to stderr
 verbose = false
 
-# The trans script used to setup
+# The divvy script used to setup
 script_file = nil
 
 # parse arguments
@@ -23,9 +23,9 @@ ARGV.options do |opts|
 end
 script_file = ARGV.shift
 
-require 'trans'
-script = Trans::Script.load(script_file)
+require 'divvy'
+script = Divvy::Script.load(script_file)
 warn "booting #{worker_count} workers for #{script.class}" if verbose
 
-master = Trans::Master.new(script, worker_count, verbose)
+master = Divvy::Master.new(script, worker_count, verbose)
 master.main

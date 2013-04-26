@@ -1,4 +1,4 @@
-module Trans
+module Divvy
   class Script
     def dispatch
       $stdin.each_line { |line| yield line }
@@ -16,7 +16,7 @@ module Trans
 
     # The unix domain socket file used to communicate between master and worker
     def socket
-      @socket ||= "/tmp/trans-#{$$}.sock"
+      @socket ||= "/tmp/divvy-#{$$}.sock"
     end
 
     def self.load(file)
@@ -25,13 +25,13 @@ module Trans
       if subclass = @subclasses.last
         subclass.new
       else
-        fail "#{file} does not define a subclass of Trans::Script"
+        fail "#{file} does not define a subclass of Divvy::Script"
       end
     end
 
     @subclasses = []
     def self.inherited(subclass)
-      @subclasses << subclass if self == Trans::Script
+      @subclasses << subclass if self == Divvy::Script
       super
     end
   end

@@ -1,6 +1,6 @@
 require 'socket'
 
-module Trans
+module Divvy
   class Master
     attr_accessor :verbose
 
@@ -20,7 +20,7 @@ module Trans
 
       @workers = []
       (1..@worker_count).each do |worker_num|
-        worker = Trans::Worker.new(@script, worker_num, @input_read, @verbose)
+        worker = Divvy::Worker.new(@script, worker_num, @input_read, @verbose)
         workers << worker
       end
     end

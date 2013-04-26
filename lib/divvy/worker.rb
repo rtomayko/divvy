@@ -1,4 +1,4 @@
-module Trans
+module Divvy
   class Worker
     # The worker number
     attr_reader :number
