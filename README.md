@@ -7,14 +7,10 @@ or a queue server).
 
 ## example
 
-This is a simple and contrived example of a job script. The only requirements
-are that you subclass `Divvy::Script` and implement the `#dispatch` and
-`#perform` methods. There are also hooks available for tapping into the worker
-process lifecycle.
-
-The example generates tasks for a series of numbers. The task items are routed
-to an available worker process where they're SHA1 hexdigest is calculated and
-written to standard output.
+This is a simple and contrived example of a divvy job script. You must define a
+class that includes the `Divvy::Parallelizable` module and implement the
+`#dispatch` and `#perform` methods. There are also hooks available for tapping
+into the worker process lifecycle.
 
 ``` ruby
 # This is a dance party. We're going to hand out tickets. We need to generate
@@ -81,7 +77,7 @@ end
 
 You can run the example script above with the `divvy` command, which includes
 options for controlling concurrency and other cool stuff. Here we use five
-worker processes:
+worker processes to generate 10 dance party ticket codes:
 
 ```
 $ divvy -n 5 danceparty.rb
@@ -97,14 +93,15 @@ $ divvy -n 5 danceparty.rb
 51593        7 902ba3cda1883801594b6e1b452790cc53948fda
 ```
 
-The columns of output are the worker pid, number argument, and the SHA1 hex
-digest of the number. You can see items are distributed between workers may not
-be processed in order.
+The columns of output are the worker pid, the ticket number input, and the
+generated ticket code result. You can see items are distributed between
+available workers evenly-ish and may not be processed in order.
 
 ### manual runner
 
-You can also turn the current process into a divvy master process by creating a
-`Divvy::Master` object, passing an instance of `Parallelizable`
+You can also turn the current ruby process into a divvy master by creating a
+`Divvy::Master` object, passing an instance of `Parallelizable` and the amount
+of desired concurrency:
 
 ``` ruby
 require 'danceparty'
