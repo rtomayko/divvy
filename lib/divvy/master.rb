@@ -6,21 +6,24 @@ module Divvy
 
     attr_reader :workers
     attr_reader :worker_count
+    attr_reader :socket
 
     # Exception raised when a graceful shutdown signal is received.
     class Shutdown < StandardError
     end
 
-    def initialize(script, worker_count, verbose = false)
+    def initialize(script, worker_count, verbose = false, socket = nil)
       @script = script
       @worker_count = worker_count
       @verbose = verbose
+      @socket = socket || "/tmp/divvy-#{$$}-#{object_id}.sock"
+
       @shutdown = false
       @reap = false
 
       @workers = []
       (1..@worker_count).each do |worker_num|
-        worker = Divvy::Worker.new(@script, worker_num, @input_read, @verbose)
+        worker = Divvy::Worker.new(@script, worker_num, @socket, @verbose)
         workers << worker
       end
     end
@@ -57,13 +60,13 @@ module Divvy
     end
 
     def start_server
-      File.unlink(@script.socket) if File.exist?(@script.socket)
-      @server = UNIXServer.new(@script.socket)
+      File.unlink(@socket) if File.exist?(@socket)
+      @server = UNIXServer.new(@socket)
       @server.listen(worker_count)
     end
 
     def stop_server
-      File.unlink(@script.socket) if File.exist?(@script.socket)
+      File.unlink(@socket) if File.exist?(@socket)
       @server.close if @server
       @server = nil
     end

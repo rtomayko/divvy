@@ -3,8 +3,11 @@ module Divvy
     # The worker number
     attr_reader :number
 
-    # The pipe this worker will use to read messages
-    attr_reader :input_channel
+    # The Unix domain socket file used to communicate with the master process.
+    attr_reader :socket
+
+    # Whether verbose log info should be written to stderr.
+    attr_accessor :verbose
 
     # Process::Status object result of reaping the worker.
     attr_reader :status
@@ -12,14 +15,13 @@ module Divvy
     # The worker processes's pid. This is $$ when inside the worker process.
     attr_accessor :pid
 
-    # Whether verbose log info should be written to stderr.
-    attr_accessor :verbose
-
-    def initialize(script, number, input_channel, verbose = false)
+    def initialize(script, number, socket, verbose = false)
       @script = script
       @number = number
-      @input_channel = input_channel
+      @socket = socket
       @verbose = verbose
+      @pid = nil
+      @status = nil
     end
 
     def running?
@@ -59,7 +61,7 @@ module Divvy
     end
 
     def dequeue
-      client = UNIXSocket.new(@script.socket)
+      client = UNIXSocket.new(@socket)
       r, w, e = IO.select([client], nil, [client], nil)
       return if !e.empty?
 
