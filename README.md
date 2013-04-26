@@ -1,5 +1,5 @@
 divvy - parallel script runner
-=============================
+==============================
 
 This is a (forking) parallel task runner for Ruby designed to be run in the
 foreground and to require no external infrastructure components (like redis or a
