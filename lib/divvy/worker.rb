@@ -34,8 +34,8 @@ module Divvy
 
       if (@pid = fork).nil?
         @pid = $$
-        install_signal_traps
         yield
+        install_signal_traps
         main
         exit 0
       end
