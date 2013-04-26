@@ -16,6 +16,10 @@ module Divvy
     # Enable verbose logging to stderr.
     attr_accessor :verbose
 
+    # Raised from a signal handler when a forceful shutdown is requested.
+    class Shutdown < Exception
+    end
+
     # Create the master process object.
     #
     # task         - Object that implements the Parallelizable interface.
@@ -62,6 +66,12 @@ module Divvy
 
         data = Marshal.dump(task_item)
 
+        # check for shutdown until a connection is pending in the queue.
+        while IO.select([@server], nil, nil, 0.010).nil?
+          break if @shutdown
+        end
+        break if @shutdown
+
         begin
           sock = @server.accept
           sock.write(data)
@@ -79,13 +89,6 @@ module Divvy
       shutdown! if !worker_process?
     end
 
-    # Public: Initiate shutdown of the run loop. The loop will not be stopped when
-    # this method returns. The original run loop will return after the current
-    # iteration of task item.
-    def shutdown
-      @shutdown = true
-    end
-
     # Public: Check if the current process is the master process.
     #
     # Returns true in the master process, false in the worker process.
@@ -101,6 +104,19 @@ module Divvy
       !master_process?
     end
 
+    # Public: Are any worker processes currently running or have yet to be
+    # reaped by the master process?
+    def workers_running?
+      @workers.any? { |worker| worker.running? }
+    end
+
+    # Public: Initiate shutdown of the run loop. The loop will not be stopped when
+    # this method returns. The original run loop will return after the current
+    # iteration of task item.
+    def shutdown
+      @shutdown = Time.now
+    end
+
     # Internal: Really shutdown the unix socket and reap all worker processes.
     # This doesn't signal the workers. Instead, the socket shutdown is relied
     # upon to trigger the workers to exit normally.
@@ -110,9 +126,9 @@ module Divvy
       fail "Master#shutdown! called in worker process" if worker_process?
       reset_signal_traps
       stop_server
-      while workers.any? { |worker| worker.running? }
-        reap_workers
-        sleep 0.010
+      while workers_running?
+        reaped = reap_workers
+        sleep 0.010 if reaped.empty?
       end
     end
 
@@ -192,20 +208,44 @@ module Divvy
       workers.select { |worker| worker.reap }
     end
 
-    # Internal: Install traps for shutdown signals. This triggers a shutdown of
-    # the main loop any time an INT, TERM, or QUIT signal is recieved by the
-    # master process. The CHLD signal is trapped to initiate reaping of worker
-    # processes.
+    # Internal: Install traps for shutdown signals. Most signals deal with
+    # shutting down the master loop and socket.
+    #
+    # INFO      - Dump stack for all processes to stderr.
+    # TERM      - Initiate immediate forceful shutdown of all worker processes
+    #             along with the master process, aborting any existing jobs in
+    #             progress.
+    # INT, QUIT - Initiate graceful shutdown, allowing existing worker processes
+    #             to finish their current task and exit on their own. If this
+    #             signal is received again after 10s, instead initiate an
+    #             immediate forceful shutdown as with TERM. This is mostly so you
+    #             can interrupt sanely with Ctrl+C with the master foregrounded.
+    # CHLD      - Set the worker reap flag. An attempt is made to reap workers
+    #             immediately after the current dispatch iteration.
+    #
+    # Returns nothing.
     def install_signal_traps
       @traps =
-        %w[INT TERM QUIT].map do |signal|
+        %w[INT QUIT].map do |signal|
           Signal.trap signal do
-            next if @shutdown
-            shutdown
-            log "#{signal} received. initiating graceful shutdown..."
+            if @shutdown
+              wait_time = Time.now - @shutdown
+              raise Shutdown, "Interrupt" if wait_time > 10 # seconds
+              next
+            else
+              shutdown
+              log "#{signal} received. initiating graceful shutdown..."
+            end
           end
         end
       @traps << Signal.trap("CHLD") { @reap = true }
+      @traps << Signal.trap("TERM") { raise Shutdown, "SIGTERM" }
+
+      Signal.trap "INFO" do
+        message = "==> info: process #$$ dumping stack\n"
+        message << caller.join("\n").gsub(/^/, "    ").gsub("#{Dir.pwd}/", "")
+        $stderr.puts(message)
+      end
     end
 
     # Internal: Uninstall signal traps set up by the install_signal_traps
