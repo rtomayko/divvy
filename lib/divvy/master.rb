@@ -98,7 +98,11 @@ module Divvy
           break if @shutdown
           if @reap
             reap_workers
-            raise BootFailure, "Worker processes failed to boot." if !workers_running?
+            if !workers_running? && @tasks_distributed == 0
+              raise BootFailure, "Worker processes failed to boot."
+            else
+              boot_workers
+            end
           end
         end
         break if @shutdown
