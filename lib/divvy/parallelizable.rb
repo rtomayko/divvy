@@ -50,7 +50,7 @@ module Divvy
     # Track classes and modules that include this module.
     @parallelizable = []
     def self.included(mod)
-      @parallelizable << mod if self == Divvy::Script
+      @parallelizable << mod if self == Divvy::Parallelizable
       super
     end
     def self.parallelizable; @parallelizable; end

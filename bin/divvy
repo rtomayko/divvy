@@ -24,8 +24,8 @@ end
 script_file = ARGV.shift
 
 require 'divvy'
-script = Divvy::Script.load(script_file)
-warn "booting #{worker_count} workers for #{script.class}" if verbose
+task = Divvy.load(script_file)
+warn "divvy: booting #{worker_count} workers for #{task.class}" if verbose
 
-master = Divvy::Master.new(script, worker_count, verbose)
+master = Divvy::Master.new(task, worker_count, verbose)
 master.main

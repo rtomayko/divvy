@@ -15,8 +15,8 @@ module Divvy
     # The worker processes's pid. This is $$ when inside the worker process.
     attr_accessor :pid
 
-    def initialize(script, number, socket, verbose = false)
-      @script = script
+    def initialize(task, number, socket, verbose = false)
+      @task = task
       @number = number
       @socket = socket
       @verbose = verbose
@@ -47,10 +47,10 @@ module Divvy
       fail "Worker#main called in master process" if !worker_process?
 
       log "booted with pid #{@pid}"
-      @script.after_fork(self)
+      @task.after_fork(self)
 
       while arguments = dequeue
-        @script.perform(*arguments)
+        @task.perform(*arguments)
         break if @shutdown
       end
 

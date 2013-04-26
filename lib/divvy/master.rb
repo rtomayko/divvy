@@ -12,8 +12,8 @@ module Divvy
     class Shutdown < StandardError
     end
 
-    def initialize(script, worker_count, verbose = false, socket = nil)
-      @script = script
+    def initialize(task, worker_count, verbose = false, socket = nil)
+      @task = task
       @worker_count = worker_count
       @verbose = verbose
       @socket = socket || "/tmp/divvy-#{$$}-#{object_id}.sock"
@@ -23,7 +23,7 @@ module Divvy
 
       @workers = []
       (1..@worker_count).each do |worker_num|
-        worker = Divvy::Worker.new(@script, worker_num, @socket, @verbose)
+        worker = Divvy::Worker.new(@task, worker_num, @socket, @verbose)
         workers << worker
       end
     end
@@ -32,7 +32,7 @@ module Divvy
       setup_signal_traps
       start_server
 
-      @script.dispatch do |*arguments|
+      @task.dispatch do |*arguments|
         boot_workers
 
         data = Marshal.dump(arguments)
@@ -81,7 +81,7 @@ module Divvy
     def boot_worker(worker)
       fail "worker #{worker.number} already running" if worker.running?
 
-      @script.before_fork(worker)
+      @task.before_fork(worker)
 
       worker.spawn do
         @workers = []
