@@ -41,19 +41,19 @@ module Trans
       fail "Worker#main called in master process" if !worker_process?
 
       log "booted with pid #{@pid}"
-      @script.after_fork(worker)
+      @script.after_fork(self)
 
       while arguments = dequeue
         @script.perform(*arguments)
         break if @shutdown
       end
 
-      @input_read.close
+      @input_channel.close
       log "complete"
     end
 
     def dequeue
-      Marshal.load(@input_read)
+      Marshal.load(@input_channel)
     rescue EOFError
       nil
     end

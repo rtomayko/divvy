@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+#/ Usage: trans [-n <workers>] <script>.rb
+#/ Run a trans script with the given number of workers.
+require 'optparse'
+
+# Number of work processes to spawn.
+worker_count = 1
+
+# The trans script used to setup
+script_file = nil
+
+# parse arguments
+file = __FILE__
+ARGV.options do |opts|
+  opts.on("-n", "--workers=val", Integer)  { |val| worker_count = val }
+  opts.on_tail("-h", "--help")             { exec "grep ^#/<'#{file}'|cut -c4-" }
+  opts.parse!
+end
+script_file = ARGV.shift
+
+require 'trans'
+script = Trans::Script.load(script_file)
+warn "booting #{worker_count} workers for #{script.class}"
+master = Trans::Master.new(script, worker_count)
+master.main
