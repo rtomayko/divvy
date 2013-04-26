@@ -52,17 +52,24 @@ module Trans
         break if @shutdown
       end
 
-      @input_channel.close
-      log "complete"
+      # worker should exit on return
     rescue Exception => boom
       warn "error: worker [#{number}]: #{boom.class} #{boom.to_s}"
       exit 1
     end
 
     def dequeue
-      Marshal.load(@input_channel)
-    rescue EOFError
-      nil
+      client = UNIXSocket.new(@script.socket)
+      r, w, e = IO.select([client], nil, [client], nil)
+      return if !e.empty?
+
+      if data = client.read(16384)
+        Marshal.load(data)
+      end
+    rescue Errno::ENOENT => boom
+      # socket file went away, bail out
+    ensure
+      client.close if client
     end
 
     def reap

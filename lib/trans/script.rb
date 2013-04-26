@@ -14,6 +14,11 @@ module Trans
     def after_fork
     end
 
+    # The unix domain socket file used to communicate between master and worker
+    def socket
+      @socket ||= "/tmp/trans-#{$$}.sock"
+    end
+
     def self.load(file)
       Kernel::load(file)
 

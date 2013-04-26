@@ -1,10 +1,11 @@
+require 'socket'
+
 module Trans
   class Master
     attr_accessor :verbose
 
     attr_reader :workers
     attr_reader :worker_count
-    attr_reader :input_read
 
     # Exception raised when a graceful shutdown signal is received.
     class Shutdown < StandardError
@@ -14,10 +15,6 @@ module Trans
       @script = script
       @worker_count = worker_count
       @verbose = verbose
-
-      @input_read, @input_write = IO.pipe
-      @input_read.sync = @input_write.sync = true
-
       @shutdown = false
       @reap = false
 
@@ -30,25 +27,45 @@ module Trans
 
     def main
       setup_signal_traps
+      start_server
 
       @script.dispatch do |*arguments|
         boot_workers
 
         data = Marshal.dump(arguments)
-        @input_write.write(data)
-        @input_write.flush
+
+        begin
+          sock = @server.accept
+          sock.write(data)
+        ensure
+          sock.close if sock
+        end
 
         break if @shutdown
+        reap_workers if @reap
       end
-
-      @input_write.close
-      @input_read.close
 
     ensure
-      while workers.any? { |worker| worker.running? }
-        reap_workers
-        sleep 0.010
+      if !workers.empty?
+        stop_server
+        while workers.any? { |worker| worker.running? }
+          reap_workers
+          sleep 0.010
+          # TODO send TERM when workers won't reap for some amount of time
+        end
       end
+    end
+
+    def start_server
+      File.unlink(@script.socket) if File.exist?(@script.socket)
+      @server = UNIXServer.new(@script.socket)
+      @server.listen(worker_count)
+    end
+
+    def stop_server
+      File.unlink(@script.socket) if File.exist?(@script.socket)
+      @server.close if @server
+      @server = nil
     end
 
     def boot_workers
@@ -65,7 +82,8 @@ module Trans
 
       worker.spawn do
         @workers = []
-        @input_write.close
+        @server.close
+        @server = nil
         $stdin.close
       end
 
