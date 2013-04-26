@@ -211,6 +211,7 @@ module Divvy
     # Returns the Worker object provided.
     def boot_worker(worker)
       fail "worker #{worker.number} already running" if worker.running?
+      fail "attempt to boot worker without server" if !@server
 
       @task.before_fork(worker)
 
@@ -293,6 +294,8 @@ module Divvy
         message << caller.join("\n").gsub(/^/, "    ").gsub("#{Dir.pwd}/", "")
         $stderr.puts(message)
       end
+
+      @traps
     end
 
     # Internal: Uninstall signal traps set up by the install_signal_traps
@@ -300,7 +303,8 @@ module Divvy
     # traps to their default implementations and also when the master process
     # shuts down.
     def reset_signal_traps
-      %w[INT TERM QUIT CHLD].each do |signal|
+      return if @traps.nil? || @traps.empty?
+      %w[INT QUIT CHLD TERM].each do |signal|
         handler = @traps.shift || "DEFAULT"
         if handler.is_a?(String)
           Signal.trap(signal, handler)
