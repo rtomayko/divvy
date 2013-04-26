@@ -7,8 +7,8 @@ Gem::Specification.new do |s|
   s.authors     = %w[@rtomayko]
   s.email       = ["rtomayko@gmail.com"]
   s.homepage    = "https://github.com/rtomayko/divvy"
-  s.summary     = "little ruby parallel script runner"
-  s.description = "..."
+  s.description = "little ruby parallel script runner"
+  s.summary     = "..."
 
   s.add_development_dependency "rake"
   s.add_development_dependency "minitest"
