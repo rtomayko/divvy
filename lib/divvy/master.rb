@@ -31,6 +31,11 @@ module Divvy
     class Shutdown < Exception
     end
 
+    # Raised from the run loop when worker processes never fully booted and
+    # started making connections to the master.
+    class BootFailure < StandardError
+    end
+
     # Create the master process object.
     #
     # task         - Object that implements the Parallelizable interface.
@@ -74,6 +79,8 @@ module Divvy
     # called within the loop.
     #
     # Returns nothing.
+    # Raises BootFailure when the workers fail to start.
+    # Raises Shutdown when a forceful shutdown is triggered (SIGTERM).
     def run
       fail "Already running!!!" if @server
       fail "Attempt to run master in a worker process" if worker_process?
@@ -81,30 +88,35 @@ module Divvy
       start_server
 
       @task.dispatch do |*task_item|
+        # boot workers that haven't started yet or have been reaped
+        break if @shutdown
+        reap_workers if @reap
         boot_workers
 
-        data = Marshal.dump(task_item)
-
-        # check for shutdown until a connection is pending in the queue.
+        # check for shutdown or worker reap flag until a connection is pending
+        # in the domain socket queue. bail out if workers exited before even
+        # requesting a task item.
         while IO.select([@server], nil, nil, 0.010).nil?
           break if @shutdown
+          if @reap
+            reap_workers
+            raise BootFailure, "Worker processes failed to boot." if !workers_running?
+          end
         end
         break if @shutdown
 
+        # at this point there should be at least one connection pending.
         begin
+          data = Marshal.dump(task_item)
           sock = @server.accept
           sock.write(data)
         ensure
           sock.close if sock
         end
         @tasks_distributed += 1
-
-        break if @shutdown
-        reap_workers if @reap
       end
 
       nil
-
     rescue Shutdown
       @graceful = false
       @shutdown = true
@@ -154,6 +166,7 @@ module Divvy
         sleep 0.010 if reaped.empty?
       end
       reset_signal_traps
+      raise Shutdown if !@graceful
     end
 
     # Internal: create and bind to the unix domain socket. Note that the
@@ -233,6 +246,7 @@ module Divvy
       workers.select do |worker|
         if status = worker.reap
           @failures += 1 if !status.success?
+          worker
         end
       end
     end
