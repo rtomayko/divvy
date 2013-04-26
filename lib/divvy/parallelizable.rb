@@ -1,4 +1,7 @@
 module Divvy
+  # Module defining the main task interface. Parallelizable classes must respond
+  # to #dispatch and #perform and may override hook methods to tap into the
+  # worker process lifecycle.
   module Parallelizable
     # The main loop responsible for generating task items to process in workers.
     # Runs in the master process only. Each item this method yields is distributed
