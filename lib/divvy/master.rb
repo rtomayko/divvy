@@ -16,6 +16,17 @@ module Divvy
     # Enable verbose logging to stderr.
     attr_accessor :verbose
 
+    # Number of tasks that have been distributed to worker processes.
+    attr_reader :tasks_distributed
+
+    # Number of worker processes that have exited with a failure status since
+    # the master started processing work.
+    attr_reader :failures
+
+    # Number of worker processes that have been spawned since the master
+    # started processing work.
+    attr_reader :spawn_count
+
     # Raised from a signal handler when a forceful shutdown is requested.
     class Shutdown < Exception
     end
@@ -35,6 +46,10 @@ module Divvy
       @worker_count = worker_count
       @verbose = verbose
       @socket = socket || "/tmp/divvy-#{$$}-#{object_id}.sock"
+
+      @tasks_distributed = 0
+      @failures = 0
+      @spawn_count = 0
 
       @shutdown = false
       @reap = false
@@ -78,6 +93,7 @@ module Divvy
         ensure
           sock.close if sock
         end
+        @tasks_distributed += 1
 
         break if @shutdown
         reap_workers if @reap
@@ -181,6 +197,7 @@ module Divvy
 
         $stdin.close
       end
+      @spawn_count += 1
 
       worker
     end
@@ -205,7 +222,11 @@ module Divvy
     # Worker#status attribute can be used to access the Process::Status result.
     def reap_workers
       @reap = false
-      workers.select { |worker| worker.reap }
+      workers.select do |worker|
+        if status = worker.reap
+          @failures += 1 if !status.success?
+        end
+      end
     end
 
     # Internal: Install traps for shutdown signals. Most signals deal with
