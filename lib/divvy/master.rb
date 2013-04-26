@@ -89,8 +89,6 @@ module Divvy
 
       @task.dispatch do |*task_item|
         # boot workers that haven't started yet or have been reaped
-        break if @shutdown
-        reap_workers if @reap
         boot_workers
 
         # check for shutdown or worker reap flag until a connection is pending
@@ -114,6 +112,9 @@ module Divvy
           sock.close if sock
         end
         @tasks_distributed += 1
+
+        break if @shutdown
+        reap_workers if @reap
       end
 
       nil

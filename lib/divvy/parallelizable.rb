@@ -36,7 +36,7 @@ module Divvy
     #          created. Always the current process ($$).
     #
     # Return value is ignored.
-    def after_fork
+    def after_fork(worker)
     end
 
     # Hook called before a worker process is forked off from the master process.
@@ -47,7 +47,7 @@ module Divvy
     #          always available.
     #
     # Return value is ignored.
-    def before_fork
+    def before_fork(worker)
     end
 
     # Track classes and modules that include this module.
