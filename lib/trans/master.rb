@@ -1,5 +1,7 @@
 module Trans
   class Master
+    attr_accessor :verbose
+
     attr_reader :workers
     attr_reader :worker_count
     attr_reader :input_read
@@ -8,9 +10,10 @@ module Trans
     class Shutdown < StandardError
     end
 
-    def initialize(script, worker_count)
+    def initialize(script, worker_count, verbose = false)
       @script = script
       @worker_count = worker_count
+      @verbose = verbose
 
       @input_read, @input_write = IO.pipe
       @input_read.sync = @input_write.sync = true
@@ -19,7 +22,7 @@ module Trans
 
       @workers = []
       (1..@worker_count).each do |worker_num|
-        worker = Trans::Worker.new(@script, worker_num, @input_read)
+        worker = Trans::Worker.new(@script, worker_num, @input_read, @verbose)
         workers << worker
       end
     end
@@ -90,7 +93,8 @@ module Trans
     end
 
     def log(message)
-      warn "master: #{message}"
+      return if !verbose
+      $stderr.printf("master: %s\n", message)
     end
   end
 end

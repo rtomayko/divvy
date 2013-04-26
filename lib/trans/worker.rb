@@ -12,10 +12,14 @@ module Trans
     # The worker processes's pid. This is $$ when inside the worker process.
     attr_accessor :pid
 
-    def initialize(script, number, input_channel)
+    # Whether verbose log info should be written to stderr.
+    attr_accessor :verbose
+
+    def initialize(script, number, input_channel, verbose = false)
       @script = script
       @number = number
       @input_channel = input_channel
+      @verbose = verbose
     end
 
     def running?
@@ -92,7 +96,8 @@ module Trans
     end
 
     def log(message)
-      warn "worker [#{number}]: #{message}"
+      return if !verbose
+      $stderr.printf("worker [%d]: %s\n", number, message)
     end
   end
 end
