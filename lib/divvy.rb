@@ -1,3 +1,4 @@
-require 'divvy/script'
-require 'divvy/worker'
+require 'divvy/parallelizable'
 require 'divvy/master'
+require 'divvy/worker'
+require 'divvy/script'
