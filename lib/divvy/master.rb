@@ -47,13 +47,17 @@ module Divvy
       @verbose = verbose
       @socket = socket || "/tmp/divvy-#{$$}-#{object_id}.sock"
 
+      # stats
       @tasks_distributed = 0
       @failures = 0
       @spawn_count = 0
 
+      # shutdown state
       @shutdown = false
+      @graceful = true
       @reap = false
 
+      # worker objects
       @workers = []
       (1..@worker_count).each do |worker_num|
         worker = Divvy::Worker.new(@task, worker_num, @socket, @verbose)
@@ -101,8 +105,11 @@ module Divvy
 
       nil
 
+    rescue Shutdown
+      @graceful = false
+      @shutdown = true
     ensure
-      shutdown! if !worker_process?
+      shutdown! if master_process?
     end
 
     # Public: Check if the current process is the master process.
@@ -130,7 +137,7 @@ module Divvy
     # this method returns. The original run loop will return after the current
     # iteration of task item.
     def shutdown
-      @shutdown = Time.now
+      @shutdown ||= Time.now
     end
 
     # Internal: Really shutdown the unix socket and reap all worker processes.
@@ -140,12 +147,13 @@ module Divvy
     # TODO Send SIGKILL when workers stay running for configurable period.
     def shutdown!
       fail "Master#shutdown! called in worker process" if worker_process?
-      reset_signal_traps
       stop_server
       while workers_running?
+        kill_workers("KILL") if !@graceful
         reaped = reap_workers
         sleep 0.010 if reaped.empty?
       end
+      reset_signal_traps
     end
 
     # Internal: create and bind to the unix domain socket. Note that the
@@ -250,8 +258,7 @@ module Divvy
         %w[INT QUIT].map do |signal|
           Signal.trap signal do
             if @shutdown
-              wait_time = Time.now - @shutdown
-              raise Shutdown, "Interrupt" if wait_time > 10 # seconds
+              raise Shutdown, "SIG#{signal}" if (Time.now - @shutdown) > 10 # seconds
               next
             else
               shutdown
