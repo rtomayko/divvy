@@ -1,15 +1,15 @@
 module Divvy
   # Module defining the main task interface. Parallelizable classes must respond
-  # to #dispatch and #perform and may override hook methods to tap into the
+  # to #dispatch and #process and may override hook methods to tap into the
   # worker process lifecycle.
   module Parallelizable
     # The main loop responsible for generating task items to process in workers.
     # Runs in the master process only. Each item this method yields is distributed
-    # to one of a pool of worker processes where #perform (see below) is invoked
+    # to one of a pool of worker processes where #process (see below) is invoked
     # to process the task item.
     #
     # The arguments yielded to the block are passed with same arity to
-    # the #perform method. Only marshallable types may be included.
+    # the #process method. Only marshallable types may be included.
     #
     # The dispatch method takes no arguments. It's expected that the receiving
     # object is setup with all necessary state to generate task items or can
@@ -24,8 +24,8 @@ module Divvy
     # Process an individual task item. Each item produced by #dispatch is sent here
     # in one of a pool of the worker processes. The arguments to this method must
     # match the arity of the task item yielded from #dispatch.
-    def perform(*args)
-      raise NotImplementedError, "#{self.class} must implement perform method"
+    def process(*args)
+      raise NotImplementedError, "#{self.class} must implement process method"
     end
 
     # Hook called after a worker process is forked off from the master process.

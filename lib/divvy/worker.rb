@@ -105,7 +105,7 @@ module Divvy
       @task.after_fork(self)
 
       while arguments = dequeue
-        @task.perform(*arguments)
+        @task.process(*arguments)
         break if @shutdown
       end
 

@@ -10,7 +10,7 @@ class MasterTest < MiniTest::Unit::TestCase
       10.times(&block)
     end
 
-    def perform(num)
+    def process(num)
     end
   end
 
@@ -82,7 +82,7 @@ class MasterTest < MiniTest::Unit::TestCase
       yield 'just one thing'
     end
 
-    def perform(arg)
+    def process(arg)
       if arg != 'just one thing'
         fail "expected arg to be 'just one thing'"
       end
@@ -102,7 +102,7 @@ class MasterTest < MiniTest::Unit::TestCase
       10.times(&block)
     end
 
-    def perform(num)
+    def process(num)
       if num % 2 == 0
         fail "simulated failure"
       else

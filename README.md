@@ -18,7 +18,7 @@ and their associated storage components.
 
 This is a simple and contrived example of a divvy job script. You must define a
 class that includes the `Divvy::Parallelizable` module and implement the
-`#dispatch` and `#perform` methods. There are also hooks available for tapping
+`#dispatch` and `#process` methods. There are also hooks available for tapping
 into the worker process lifecycle.
 
 ``` ruby
@@ -38,7 +38,7 @@ class DanceParty
   # This is the main loop responsible for generating work items for worker
   # processes. It runs in the master process only. Each item yielded from this
   # method is marshalled over a pipe and distributed to the next available
-  # worker process where it arrives at the #perform method (see below).
+  # worker process where it arrives at the #process method (see below).
   #
   # In this example we're just going to generate a series of numbers to pass
   # to the workers. The workers just write the number out with their pid and the
@@ -59,7 +59,7 @@ class DanceParty
   # In this example we're given a Fixnum ticket number and asked to produce a
   # code. Pretend this is a network intense operation where you're mostly
   # sleeping waiting for a reply.
-  def perform(ticket_number)
+  def process(ticket_number)
     ticket_sha1 = Digest::SHA1.hexdigest(ticket_number.to_s)
     printf "%5d %6d %s\n" % [$$, ticket_number, ticket_sha1]
     sleep 0.150 # fake some latency
