@@ -38,16 +38,15 @@ module Trans
         @input_write.flush
 
         break if @shutdown
-
-        reap_workers
       end
 
       @input_write.close
       @input_read.close
 
+    ensure
       while workers.any? { |worker| worker.running? }
         reap_workers
-        sleep 1
+        sleep 0.010
       end
     end
 
@@ -64,8 +63,9 @@ module Trans
       @script.before_fork(worker)
 
       worker.spawn do
-        $stdin.close
+        @workers = []
         @input_write.close
+        $stdin.close
       end
 
       worker
@@ -90,6 +90,8 @@ module Trans
           log "#{signal} received. initiating graceful shutdown..."
         end
       end
+
+      Signal.trap("CHLD") { reap_workers }
     end
 
     def log(message)

@@ -54,6 +54,9 @@ module Trans
 
       @input_channel.close
       log "complete"
+    rescue Exception => boom
+      warn "error: worker [#{number}]: #{boom.class} #{boom.to_s}"
+      exit 1
     end
 
     def dequeue
@@ -63,7 +66,7 @@ module Trans
     end
 
     def reap
-      if @pid && Process::waitpid(@pid, Process::WNOHANG)
+      if @status.nil? && @pid && Process::waitpid(@pid, Process::WNOHANG)
         @status = $?
         log "exited, reaped pid #{@pid} (status: #{@status.exitstatus})"
         @status
@@ -93,6 +96,8 @@ module Trans
           log "#{signal} received. initiating graceful shutdown..."
         end
       end
+
+      trap "CHLD", "DEFAULT"
     end
 
     def log(message)
