@@ -10,6 +10,10 @@ process based run environment for executing them. It's good for running coarse
 grained tasks that are network or IO heavy. It's not good at crunching lots of
 inputs quickly or parallelizing fine grained / CPU intense pieces of work.
 
+GitHub uses divvy with [ModelIterator](https://github.com/technoweenie/model_iterator)
+to perform one-off and regular maintenance tasks on different types of records
+and their associated storage components.
+
 ## example
 
 This is a simple and contrived example of a divvy job script. You must define a
