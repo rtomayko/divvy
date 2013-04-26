@@ -28,4 +28,4 @@ task = Divvy.load(script_file)
 warn "divvy: booting #{worker_count} workers for #{task.class}" if verbose
 
 master = Divvy::Master.new(task, worker_count, verbose)
-master.main
+master.run

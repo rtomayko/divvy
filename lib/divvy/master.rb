@@ -28,7 +28,7 @@ module Divvy
       end
     end
 
-    def main
+    def run
       setup_signal_traps
       start_server
 

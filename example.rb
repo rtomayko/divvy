@@ -2,6 +2,8 @@ require 'digest/sha1'
 require 'divvy'
 
 class NumbersToSHA1
+  # The Parallelizable module provides default method implementations and marks
+  # the object as following the interface defined below.
   include Divvy::Parallelizable
 
   # This is the main loop responsible for generating work items for worker
@@ -9,7 +11,7 @@ class NumbersToSHA1
   # method is marshalled over a pipe and distributed to the next available
   # worker process where it arrives at the #perform method (see below).
   def dispatch
-    count = ARGV[0] ? ARGV[0].to_i : 1_000
+    count = ARGV[0] ? ARGV[0].to_i : 10
     (0...count).each { |num| yield num }
   end
 
