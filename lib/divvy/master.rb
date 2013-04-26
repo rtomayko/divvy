@@ -52,6 +52,8 @@ module Divvy
     #
     # Returns nothing.
     def run
+      fail "Already running!!!" if @server
+      fail "Attempt to run master in a worker process" if worker_process?
       install_signal_traps
       start_server
 
@@ -70,17 +72,11 @@ module Divvy
         break if @shutdown
         reap_workers if @reap
       end
+
       nil
+
     ensure
-      if !workers.empty?
-        reset_signal_traps
-        stop_server
-        while workers.any? { |worker| worker.running? }
-          reap_workers
-          sleep 0.010
-          # TODO send TERM when workers won't reap for some amount of time
-        end
-      end
+      shutdown! if !worker_process?
     end
 
     # Public: Initiate shutdown of the run loop. The loop will not be stopped when
@@ -90,10 +86,41 @@ module Divvy
       @shutdown = true
     end
 
+    # Public: Check if the current process is the master process.
+    #
+    # Returns true in the master process, false in the worker process.
+    def master_process?
+      @workers
+    end
+
+    # Public: Check if the current process is a worker process.
+    # This relies on the @workers array being set to a nil value.
+    #
+    # Returns true in the worker process, false in master processes.
+    def worker_process?
+      !master_process?
+    end
+
+    # Internal: Really shutdown the unix socket and reap all worker processes.
+    # This doesn't signal the workers. Instead, the socket shutdown is relied
+    # upon to trigger the workers to exit normally.
+    #
+    # TODO Send SIGKILL when workers stay running for configurable period.
+    def shutdown!
+      fail "Master#shutdown! called in worker process" if worker_process?
+      reset_signal_traps
+      stop_server
+      while workers.any? { |worker| worker.running? }
+        reap_workers
+        sleep 0.010
+      end
+    end
+
     # Internal: create and bind to the unix domain socket. Note that the
     # requested backlog matches the number of workers. Otherwise workers will
     # get ECONNREFUSED when attempting to connect to the master and exit.
     def start_server
+      fail "Master#start_server called in worker process" if worker_process?
       File.unlink(@socket) if File.exist?(@socket)
       @server = UNIXServer.new(@socket)
       @server.listen(worker_count)
@@ -101,6 +128,7 @@ module Divvy
 
     # Internal: Close and remove the unix domain socket.
     def stop_server
+      fail "Master#stop_server called in worker process" if worker_process?
       File.unlink(@socket) if File.exist?(@socket)
       @server.close if @server
       @server = nil
@@ -130,7 +158,7 @@ module Divvy
 
       worker.spawn do
         reset_signal_traps
-        @workers = []
+        @workers = nil
 
         @server.close
         @server = nil
