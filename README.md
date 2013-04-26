@@ -2,8 +2,13 @@ divvy - parallel script runner
 =============================
 
 This is a (forking) parallel task runner for Ruby designed to be run in the
-foreground (i.e. not a server) with minimum infrastucture components (like redis
-or a queue server).
+foreground and to require no external infrastructure components (like redis or a
+queue server).
+
+Divvy provides a light system for defining parallelizable pieces of work and a
+process based run environment for executing them. It's good for running coarse
+grained tasks that are network or IO heavy. It's not good at crunching lots of
+inputs quickly or parallelizing fine grained / CPU intense pieces of work.
 
 ## example
 
