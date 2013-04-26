@@ -74,7 +74,7 @@ You can run the example script above with the `divvy` command, which includes
 options for controlling concurrency and other cool stuff. Here we use five
 worker processes:
 
-``` ruby
+```
 $ divvy -n 5 example.rb
 51589        0 b6589fc6ab0dc82cf12099d1c2d40ab994e8410c
 51590        1 356a192b7913b04c54574d18c28d46e6395428ab
