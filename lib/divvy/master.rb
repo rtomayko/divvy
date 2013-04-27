@@ -274,6 +274,7 @@ module Divvy
     #
     # Returns nothing.
     def install_signal_traps
+      install_siginfo_trap
       @traps =
         %w[INT QUIT].map do |signal|
           Signal.trap signal do
@@ -288,14 +289,18 @@ module Divvy
         end
       @traps << Signal.trap("CHLD") { @reap = true }
       @traps << Signal.trap("TERM") { raise Shutdown, "SIGTERM" }
+    end
 
+    # Internal: Install a trap to dump stack for all processes on SIGINFO. The
+    # signal is not supported on all operating systems (namely Linux) so we have
+    # to rescue and ignore the exception.
+    def install_siginfo_trap
       Signal.trap "INFO" do
         message = "==> info: process #$$ dumping stack\n"
         message << caller.join("\n").gsub(/^/, "    ").gsub("#{Dir.pwd}/", "")
         $stderr.puts(message)
       end
-
-      @traps
+    rescue ArgumentError
     end
 
     # Internal: Uninstall signal traps set up by the install_signal_traps
