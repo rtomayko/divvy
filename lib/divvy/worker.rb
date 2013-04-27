@@ -132,6 +132,9 @@ module Divvy
       if data = client.read(16384)
         Marshal.load(data)
       end
+    rescue Errno::ECONNRESET => boom
+      # server went away between getting in the backlog and reading actual data
+      # we treat this as if no data was read
     rescue Errno::ENOENT => boom
       # socket file went away, bail out
     ensure
