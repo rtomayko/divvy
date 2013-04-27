@@ -111,7 +111,12 @@ module Divvy
 
       # worker should exit on return
     rescue Exception => boom
-      warn "error: worker [#{number}]: #{boom.class} #{boom.to_s}"
+      message = "error: worker [#{number}]: #{boom.class} #{boom.to_s}"
+      if verbose || ENV['DIVVY_VERBOSE_TRACE']
+        backtrace = boom.backtrace.join("\n").gsub(/^/, "  ").gsub("#{Dir.pwd}/", "")
+        message << "\n#{backtrace}"
+      end
+      $stderr.puts message
       exit 1
     end
 
